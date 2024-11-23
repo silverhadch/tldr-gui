@@ -33,7 +33,7 @@ Make sure the following dependencies are installed on your system:
    ```
 2. Compile the source code:
    ```bash
-g++ -o tldr_gui src/main.cpp -lfltk
+   g++ -o tldr_gui src/main.cpp -lfltk
    ```
 
 3. Run the program:
