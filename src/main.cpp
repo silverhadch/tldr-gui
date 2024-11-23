@@ -30,7 +30,8 @@ void hidePopup(Fl_Window *popup);
 void checkForSearchTerm(void *);
 
 // Helper function to execute commands in the background and capture output
-void executeCommandInBackground(const string &command) {
+void executeCommandInBackground(const string &command,
+                                Fl_Text_Buffer *outputBuffer) {
   array<char, 128> buffer;
   string result;
 
@@ -98,7 +99,7 @@ void onSearch(Fl_Widget *widget, void *data) {
 
   // Run the TLDR command with the input text in the background
   string command = "tldr " + string(searchField->value()) + " &";
-  thread commandThread(executeCommandInBackground, command);
+  thread commandThread(executeCommandInBackground, command, outputBuffer);
   commandThread.detach(); // Detach the thread to run asynchronously
 
   // Reset timeout flag
@@ -106,6 +107,20 @@ void onSearch(Fl_Widget *widget, void *data) {
 
   // Add a timeout to check after 7 seconds using a lambda
   Fl::add_timeout(1.0, [](void *) { checkForSearchTerm(nullptr); });
+}
+
+// Static function to be used as a callback for Fl::awake
+static void randomCommandWrapper(void *data) {
+  // Run the TLDR random command in the background
+  string command = "tldr --random &";
+  Fl_Text_Buffer *outputBuffer = static_cast<Fl_Text_Buffer *>(data);
+  executeCommandInBackground(command, outputBuffer);
+}
+
+// Random button callback
+void onRandom(Fl_Widget *widget, void *data) {
+  // Use Fl::awake to invoke the random command in the main thread
+  Fl::awake(randomCommandWrapper, data);
 }
 
 // Update button callback
@@ -126,7 +141,7 @@ void onUpdate(Fl_Widget *widget, void *data) {
   // Run the TLDR update command in the background
   thread updateThread([&]() {
     string command = "tldr -u &";
-    executeCommandInBackground(command);
+    executeCommandInBackground(command, buffer);
 
     // After update finishes, close the popup
     Fl::awake((Fl_Awake_Handler)hidePopup, popup);
@@ -162,8 +177,12 @@ int main() {
   void *callbackData[] = {searchField, textBuffer};
   searchButton->callback(onSearch, callbackData);
 
+  // Create random button
+  Fl_Button *randomButton = new Fl_Button(460, 50, 80, 30, "Random");
+  randomButton->callback(onRandom, textBuffer);
+
   // Create update button
-  Fl_Button *updateButton = new Fl_Button(460, 50, 80, 30, "Update");
+  Fl_Button *updateButton = new Fl_Button(550, 50, 80, 30, "Update");
   updateButton->callback(onUpdate, textBuffer);
 
   // Finalize and show the window
@@ -172,3 +191,4 @@ int main() {
 
   return Fl::run();
 }
+
