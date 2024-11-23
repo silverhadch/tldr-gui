@@ -35,7 +35,6 @@ void executeCommandInBackground(const string &command,
   array<char, 128> buffer;
   string result;
 
-  // Open a pipe to run the command in the background
   shared_ptr<FILE> pipe(popen((command + " 2>&1").c_str(), "r"), pclose);
   if (!pipe) {
     outputBuffer->text("Error: Failed to start the command!");
@@ -44,23 +43,21 @@ void executeCommandInBackground(const string &command,
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
-    // Update the output buffer with new output
-    Fl::lock(); // Lock the UI thread for safe text buffer update
+    Fl::lock();
     outputBuffer->text(result.c_str());
-    Fl::unlock(); // Unlock after updating the UI
-    Fl::flush();  // Flush to update the UI immediately
+    Fl::unlock();
+    Fl::flush();
   }
 }
 
 // Function to check if the output contains the search term
 void checkForSearchTerm(void *) {
   if (timeoutOccurred)
-    return; // Exit if popup already triggered
+    return;
 
-  // Check if the search term exists in the output buffer
   string outputText = outputBuffer->text();
   if (outputText.find(searchTerm) == string::npos) {
-    timeoutOccurred = true; // Mark timeout occurred
+    timeoutOccurred = true;
     Fl::lock();
     showPopupError();
     Fl::unlock();
@@ -89,21 +86,14 @@ void onSearch(Fl_Widget *widget, void *data) {
   auto *searchField = static_cast<Fl_Input *>(static_cast<void **>(data)[0]);
   outputBuffer = static_cast<Fl_Text_Buffer *>(static_cast<void **>(data)[1]);
 
-  // Get the search term from the input field
   searchTerm = searchField->value();
-
-  // Kill any existing "tldr" processes (except the GUI process)
   killTldrProcesses();
 
-  // Run the TLDR command with the input text in the background
   string command = "tldr " + string(searchField->value()) + " &";
   thread commandThread(executeCommandInBackground, command, outputBuffer);
-  commandThread.detach(); // Detach the thread to run asynchronously
+  commandThread.detach();
 
-  // Reset timeout flag
   timeoutOccurred = false;
-
-  // Add a timeout to check after 7 seconds using a lambda
   Fl::add_timeout(1.0, [](void *) { checkForSearchTerm(nullptr); });
 }
 
@@ -119,7 +109,7 @@ void onRandom(Fl_Widget *widget, void *data) {
   Fl::awake(randomCommandWrapper, data);
 }
 
-// Update button callback
+// Update Database button callback
 void onUpdate(Fl_Widget *widget, void *data) {
   Fl_Window *popup = new Fl_Window(300, 100, "Updating");
   popup->begin();
@@ -149,25 +139,36 @@ void onUpdate(Fl_Widget *widget, void *data) {
 void hidePopup(Fl_Window *popup) { popup->hide(); }
 
 int main() {
-  Fl_Window *window = new Fl_Window(800, 600, "TLDR GUI");
+  Fl_Window *window =
+      new Fl_Window(Fl::w(), Fl::h(), "TLDR GUI"); // Fullscreen dimensions
+  window->fullscreen();                            // Default to maximized
+
+  // Add title at the top
+  Fl_Box *title = new Fl_Box(0, 10, Fl::w(), 50, "TLDR Command GUI");
+  title->labelfont(FL_BOLD);
+  title->labelsize(24);
+  title->align(FL_ALIGN_CENTER);
 
   // Label for the search field
-  Fl_Box *searchLabel = new Fl_Box(50, 20, 300, 30, "Search:");
-  searchLabel->align(FL_ALIGN_INSIDE |
-                     FL_ALIGN_LEFT); // Align text inside and to the left
+  Fl_Box *searchLabel = new Fl_Box(50, 70, 300, 30, "Search:");
+  searchLabel->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT);
 
   // Search field
-  Fl_Input *searchField = new Fl_Input(50, 50, 300, 30);
+  Fl_Input *searchField = new Fl_Input(50, 100, 300, 30);
 
   // Text display
   Fl_Text_Buffer *textBuffer = new Fl_Text_Buffer();
-  Fl_Text_Display *textDisplay = new Fl_Text_Display(50, 100, 700, 400);
+  Fl_Text_Display *textDisplay =
+      new Fl_Text_Display(50, 150, Fl::w() - 100, Fl::h() - 200);
   textDisplay->buffer(textBuffer);
+  textDisplay->textsize(16); // Increase text size for better readability
+  window->resizable(
+      textDisplay); // Ensure the text display scales with the window
 
   // Buttons
-  Fl_Button *searchButton = new Fl_Button(370, 50, 80, 30, "Search");
-  Fl_Button *randomButton = new Fl_Button(460, 50, 80, 30, "Random");
-  Fl_Button *updateButton = new Fl_Button(550, 50, 80, 30, "Update");
+  Fl_Button *searchButton = new Fl_Button(370, 100, 80, 30, "Search");
+  Fl_Button *randomButton = new Fl_Button(460, 100, 80, 30, "Random");
+  Fl_Button *updateButton = new Fl_Button(550, 100, 120, 30, "Update Database");
 
   // Combine data for callbacks
   void *callbackData[] = {searchField, textBuffer};
@@ -180,4 +181,3 @@ int main() {
 
   return Fl::run();
 }
-
