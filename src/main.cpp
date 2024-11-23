@@ -1,4 +1,5 @@
 #include <FL/Fl.H>
+#include <FL/Fl_Box.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Text_Buffer.H>
@@ -7,6 +8,7 @@
 #include <array>
 #include <atomic>
 #include <cstdlib>
+#include <cstring> // for strcmp
 #include <iostream>
 #include <memory>
 #include <signal.h>
@@ -18,9 +20,31 @@
 
 using namespace std;
 
+// Function to kill processes with "tldr" in the name, excluding the GUI
+void killTldrProcesses() {
+  // Get the current process ID
+  pid_t pid = getpid();
+
+  // Run the pkill command to kill processes with "tldr" in the name, but
+  // exclude the current process
+  string command =
+      "ps aux | grep '[t]ldr' | awk '{if ($2 != " + to_string(pid) +
+      ") system(\"kill -9 \" $2)}'";
+
+  system(command.c_str());
+}
+
+// Function to hide the popup window
+void hidePopup(Fl_Window *popup) {
+  Fl::lock();
+  popup->hide();
+  Fl::unlock();
+}
+
 // Helper function to execute commands in the background and capture output
 void executeCommandInBackground(const string &command, atomic<bool> &cancelFlag,
-                                Fl_Text_Buffer *outputBuffer) {
+                                Fl_Text_Buffer *outputBuffer,
+                                const string &searchTerm) {
   array<char, 128> buffer;
   string result;
 
@@ -33,12 +57,6 @@ void executeCommandInBackground(const string &command, atomic<bool> &cancelFlag,
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
-    // Check for the "✔ Page not found" message
-    if (result.find("✔ Page not found") != string::npos) {
-      cancelFlag.store(true); // Flag to cancel the command
-      break;
-    }
-
     // Update the output buffer with new output
     Fl::lock(); // Lock the UI thread for safe text buffer update
     outputBuffer->text(result.c_str());
@@ -46,15 +64,21 @@ void executeCommandInBackground(const string &command, atomic<bool> &cancelFlag,
     Fl::flush();  // Flush to update the UI immediately
   }
 
-  if (cancelFlag.load()) {
+  // Check if the search term was found in the result
+  if (result.find(searchTerm) == string::npos) {
+    // If not found, show a custom popup error
     Fl::lock();
-    outputBuffer->text("Error: ✔ Page not found.");
+    Fl_Window *popup = new Fl_Window(300, 100, "Error");
+    Fl_Box *box = new Fl_Box(20, 30, 260, 40,
+                             "Page not found for the given search term.");
+    popup->end();
+    popup->show();
     Fl::unlock();
+
+    // Process events to show the popup immediately
+    Fl::awake((Fl_Awake_Handler)hidePopup, popup);
   }
 }
-
-// Function to hide the popup window
-void hidePopup(Fl_Window *popup) { popup->hide(); }
 
 // Search button callback
 void onSearch(Fl_Widget *widget, void *data) {
@@ -62,15 +86,21 @@ void onSearch(Fl_Widget *widget, void *data) {
   auto *outputBuffer =
       static_cast<Fl_Text_Buffer *>(static_cast<void **>(data)[1]);
 
+  // Kill any existing "tldr" processes (except the GUI process)
+  killTldrProcesses();
+
   // Run the TLDR command with the input text in the background
   string command = "tldr " + string(searchField->value()) + " &";
 
   // Atomic flag to control process cancellation
   atomic<bool> cancelFlag(false);
 
+  // Get the search term from the input field
+  string searchTerm = searchField->value();
+
   // Run the command in a separate thread
   thread commandThread(executeCommandInBackground, command, ref(cancelFlag),
-                       outputBuffer);
+                       outputBuffer, searchTerm);
   commandThread.detach(); // Detach the thread to allow it to run asynchronously
 }
 
@@ -94,7 +124,7 @@ void onUpdate(Fl_Widget *widget, void *data) {
   // Run the TLDR update command in the background
   thread updateThread([&]() {
     string command = "tldr -u &";
-    executeCommandInBackground(command, cancelFlag, buffer);
+    executeCommandInBackground(command, cancelFlag, buffer, "Updating");
 
     // After update finishes, close the popup
     Fl::awake((Fl_Awake_Handler)hidePopup, popup);
