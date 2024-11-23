@@ -86,8 +86,7 @@ void onUpdate(Fl_Widget *widget, void *data) {
   popupMessage->buffer(buffer);
   buffer->text("Updating, please wait...");
   popup->end();
-  popup->set_modal();
-  popup->show();
+  popup->show(); // Show the popup window
 
   // Atomic flag to control process cancellation
   atomic<bool> cancelFlag(false);
@@ -97,17 +96,14 @@ void onUpdate(Fl_Widget *widget, void *data) {
     string command = "tldr -u &";
     executeCommandInBackground(command, cancelFlag, buffer);
 
-    // Call Fl::awake with the hidePopup function to hide the popup after
-    // updating
+    // After update finishes, close the popup
     Fl::awake((Fl_Awake_Handler)hidePopup, popup);
   });
 
-  // Wait until the process finishes
-  while (popup->shown()) {
-    Fl::wait(); // Wait for events (keeps UI responsive)
-  }
+  // Let the user close the popup manually while waiting for the update
+  Fl::run();
 
-  // Clean up
+  // Clean up after the update
   updateThread.join();
   delete popup;
 }
