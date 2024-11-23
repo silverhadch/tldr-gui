@@ -8,7 +8,6 @@
 #include <array>
 #include <atomic>
 #include <cstdlib>
-#include <cstring> // for strcmp
 #include <iostream>
 #include <memory>
 #include <signal.h>
@@ -20,31 +19,18 @@
 
 using namespace std;
 
-// Function to kill processes with "tldr" in the name, excluding the GUI
-void killTldrProcesses() {
-  // Get the current process ID
-  pid_t pid = getpid();
+atomic<bool> timeoutOccurred(false);
+string searchTerm;
+Fl_Text_Buffer *outputBuffer;
+pid_t pid = getpid(); // Get the current process ID
 
-  // Run the pkill command to kill processes with "tldr" in the name, but
-  // exclude the current process
-  string command =
-      "ps aux | grep '[t]ldr' | awk '{if ($2 != " + to_string(pid) +
-      ") system(\"kill -9 \" $2)}'";
-
-  system(command.c_str());
-}
-
-// Function to hide the popup window
-void hidePopup(Fl_Window *popup) {
-  Fl::lock();
-  popup->hide();
-  Fl::unlock();
-}
+// Forward declarations for functions
+void showPopupError();
+void hidePopup(Fl_Window *popup);
+void checkForSearchTerm(void *);
 
 // Helper function to execute commands in the background and capture output
-void executeCommandInBackground(const string &command, atomic<bool> &cancelFlag,
-                                Fl_Text_Buffer *outputBuffer,
-                                const string &searchTerm) {
+void executeCommandInBackground(const string &command) {
   array<char, 128> buffer;
   string result;
 
@@ -63,51 +49,67 @@ void executeCommandInBackground(const string &command, atomic<bool> &cancelFlag,
     Fl::unlock(); // Unlock after updating the UI
     Fl::flush();  // Flush to update the UI immediately
   }
+}
 
-  // Check if the search term was found in the result
-  if (result.find(searchTerm) == string::npos) {
-    // If not found, show a custom popup error
+// Function to check if the output contains the search term
+void checkForSearchTerm(void *) {
+  if (timeoutOccurred)
+    return; // Exit if popup already triggered
+
+  // Check if the search term exists in the output buffer
+  string outputText = outputBuffer->text();
+  if (outputText.find(searchTerm) == string::npos) {
+    timeoutOccurred = true; // Mark timeout occurred
     Fl::lock();
-    Fl_Window *popup = new Fl_Window(300, 100, "Error");
-    Fl_Box *box = new Fl_Box(20, 30, 260, 40,
-                             "Page not found for the given search term.");
-    popup->end();
-    popup->show();
+    showPopupError();
     Fl::unlock();
-
-    // Process events to show the popup immediately
-    Fl::awake((Fl_Awake_Handler)hidePopup, popup);
   }
+}
+
+// Function to show a custom error popup
+void showPopupError() {
+  Fl_Window *popup = new Fl_Window(300, 100, "Error");
+  popup->begin();
+  Fl_Box *box =
+      new Fl_Box(20, 30, 260, 40, "Page not found!"); // Correct use of Fl_Box
+  popup->end();
+  popup->show();
+}
+
+// Function to kill existing tldr processes (except the current one)
+void killTldrProcesses() {
+  // Use the old termination logic to kill processes
+  string killCommand =
+      "ps aux | grep '[t]ldr' | awk '{if ($2 != " + to_string(pid) +
+      ") system(\"kill -9 \" $2)}'";
+  system(killCommand.c_str());
 }
 
 // Search button callback
 void onSearch(Fl_Widget *widget, void *data) {
   auto *searchField = static_cast<Fl_Input *>(static_cast<void **>(data)[0]);
-  auto *outputBuffer =
-      static_cast<Fl_Text_Buffer *>(static_cast<void **>(data)[1]);
+  outputBuffer = static_cast<Fl_Text_Buffer *>(static_cast<void **>(data)[1]);
+
+  // Get the search term from the input field
+  searchTerm = searchField->value();
 
   // Kill any existing "tldr" processes (except the GUI process)
   killTldrProcesses();
 
   // Run the TLDR command with the input text in the background
   string command = "tldr " + string(searchField->value()) + " &";
+  thread commandThread(executeCommandInBackground, command);
+  commandThread.detach(); // Detach the thread to run asynchronously
 
-  // Atomic flag to control process cancellation
-  atomic<bool> cancelFlag(false);
+  // Reset timeout flag
+  timeoutOccurred = false;
 
-  // Get the search term from the input field
-  string searchTerm = searchField->value();
-
-  // Run the command in a separate thread
-  thread commandThread(executeCommandInBackground, command, ref(cancelFlag),
-                       outputBuffer, searchTerm);
-  commandThread.detach(); // Detach the thread to allow it to run asynchronously
+  // Add a timeout to check after 7 seconds using a lambda
+  Fl::add_timeout(1.0, [](void *) { checkForSearchTerm(nullptr); });
 }
 
 // Update button callback
 void onUpdate(Fl_Widget *widget, void *data) {
-  auto *outputBuffer = static_cast<Fl_Text_Buffer *>(data);
-
   // Create a popup to show "Updating..."
   Fl_Window *popup = new Fl_Window(300, 100, "Updating");
   popup->begin();
@@ -124,7 +126,7 @@ void onUpdate(Fl_Widget *widget, void *data) {
   // Run the TLDR update command in the background
   thread updateThread([&]() {
     string command = "tldr -u &";
-    executeCommandInBackground(command, cancelFlag, buffer, "Updating");
+    executeCommandInBackground(command);
 
     // After update finishes, close the popup
     Fl::awake((Fl_Awake_Handler)hidePopup, popup);
@@ -137,6 +139,9 @@ void onUpdate(Fl_Widget *widget, void *data) {
   updateThread.join();
   delete popup;
 }
+
+// Function to hide the popup window
+void hidePopup(Fl_Window *popup) { popup->hide(); }
 
 int main() {
   // Create the main window
@@ -164,6 +169,6 @@ int main() {
   // Finalize and show the window
   window->end();
   window->show();
+
   return Fl::run();
 }
-
