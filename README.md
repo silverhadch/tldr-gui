@@ -30,30 +30,30 @@ Make sure the following dependencies are installed on your system:
    ```bash  
    git clone <repository_url>  
    cd <repository_name>
-
+   ```
 2. Compile the source code:
-
+```bash
 g++ -o tldr_gui src/main.cpp -lfltk
-
+```
 
 3. Run the program:
-
+```bash
 ./tldr_gui
+```
 
 
-
-License
+# License
 
 This project is licensed under the GNU General Public License v3.0. See the LICENSE file for more details.
 
-Notes
+# Notes
 
 This project is work in progress; features and improvements are ongoing.
 
 If you encounter any issues or have suggestions, feel free to open an issue or submit a pull request!
 
 
-To-Do
+# To-Do
 
 Improve error handling for command execution.
 
