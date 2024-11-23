@@ -71,15 +71,13 @@ void checkForSearchTerm(void *) {
 void showPopupError() {
   Fl_Window *popup = new Fl_Window(300, 100, "Error");
   popup->begin();
-  Fl_Box *box =
-      new Fl_Box(20, 30, 260, 40, "Page not found!"); // Correct use of Fl_Box
+  Fl_Box *box = new Fl_Box(20, 30, 260, 40, "Page not found!");
   popup->end();
   popup->show();
 }
 
 // Function to kill existing tldr processes (except the current one)
 void killTldrProcesses() {
-  // Use the old termination logic to kill processes
   string killCommand =
       "ps aux | grep '[t]ldr' | awk '{if ($2 != " + to_string(pid) +
       ") system(\"kill -9 \" $2)}'";
@@ -111,7 +109,6 @@ void onSearch(Fl_Widget *widget, void *data) {
 
 // Static function to be used as a callback for Fl::awake
 static void randomCommandWrapper(void *data) {
-  // Run the TLDR random command in the background
   string command = "tldr --random &";
   Fl_Text_Buffer *outputBuffer = static_cast<Fl_Text_Buffer *>(data);
   executeCommandInBackground(command, outputBuffer);
@@ -119,13 +116,11 @@ static void randomCommandWrapper(void *data) {
 
 // Random button callback
 void onRandom(Fl_Widget *widget, void *data) {
-  // Use Fl::awake to invoke the random command in the main thread
   Fl::awake(randomCommandWrapper, data);
 }
 
 // Update button callback
 void onUpdate(Fl_Widget *widget, void *data) {
-  // Create a popup to show "Updating..."
   Fl_Window *popup = new Fl_Window(300, 100, "Updating");
   popup->begin();
   Fl_Text_Display *popupMessage = new Fl_Text_Display(20, 30, 260, 40);
@@ -133,24 +128,19 @@ void onUpdate(Fl_Widget *widget, void *data) {
   popupMessage->buffer(buffer);
   buffer->text("Updating, please wait...");
   popup->end();
-  popup->show(); // Show the popup window
+  popup->show();
 
-  // Atomic flag to control process cancellation
   atomic<bool> cancelFlag(false);
 
-  // Run the TLDR update command in the background
   thread updateThread([&]() {
     string command = "tldr -u &";
     executeCommandInBackground(command, buffer);
 
-    // After update finishes, close the popup
     Fl::awake((Fl_Awake_Handler)hidePopup, popup);
   });
 
-  // Let the user close the popup manually while waiting for the update
   Fl::run();
 
-  // Clean up after the update
   updateThread.join();
   delete popup;
 }
@@ -159,33 +149,32 @@ void onUpdate(Fl_Widget *widget, void *data) {
 void hidePopup(Fl_Window *popup) { popup->hide(); }
 
 int main() {
-  // Create the main window
-  Fl_Window *window = new Fl_Window(600, 400, "TLDR GUI");
+  Fl_Window *window = new Fl_Window(800, 600, "TLDR GUI");
 
-  // Create input field for search
-  Fl_Input *searchField = new Fl_Input(50, 50, 300, 30, "Search:");
+  // Label for the search field
+  Fl_Box *searchLabel = new Fl_Box(50, 20, 300, 30, "Search:");
+  searchLabel->align(FL_ALIGN_INSIDE |
+                     FL_ALIGN_LEFT); // Align text inside and to the left
 
-  // Create text display for output
+  // Search field
+  Fl_Input *searchField = new Fl_Input(50, 50, 300, 30);
+
+  // Text display
   Fl_Text_Buffer *textBuffer = new Fl_Text_Buffer();
-  Fl_Text_Display *textDisplay = new Fl_Text_Display(50, 100, 500, 250);
+  Fl_Text_Display *textDisplay = new Fl_Text_Display(50, 100, 700, 400);
   textDisplay->buffer(textBuffer);
 
-  // Create search button
+  // Buttons
   Fl_Button *searchButton = new Fl_Button(370, 50, 80, 30, "Search");
+  Fl_Button *randomButton = new Fl_Button(460, 50, 80, 30, "Random");
+  Fl_Button *updateButton = new Fl_Button(550, 50, 80, 30, "Update");
 
-  // Combine input and output buffer for callback
+  // Combine data for callbacks
   void *callbackData[] = {searchField, textBuffer};
   searchButton->callback(onSearch, callbackData);
-
-  // Create random button
-  Fl_Button *randomButton = new Fl_Button(460, 50, 80, 30, "Random");
   randomButton->callback(onRandom, textBuffer);
-
-  // Create update button
-  Fl_Button *updateButton = new Fl_Button(550, 50, 80, 30, "Update");
   updateButton->callback(onUpdate, textBuffer);
 
-  // Finalize and show the window
   window->end();
   window->show();
 
