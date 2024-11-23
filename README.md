@@ -38,7 +38,7 @@ Make sure the following dependencies are installed on your system:
 
 3. Run the program:
    ```bash
-./tldr_gui
+   ./tldr_gui
    ```
 
 
