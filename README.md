@@ -32,14 +32,14 @@ Make sure the following dependencies are installed on your system:
    cd <repository_name>
    ```
 2. Compile the source code:
-```bash
+   ```bash
 g++ -o tldr_gui src/main.cpp -lfltk
-```
+   ```
 
 3. Run the program:
-```bash
+   ```bash
 ./tldr_gui
-```
+   ```
 
 
 # License
@@ -55,13 +55,13 @@ If you encounter any issues or have suggestions, feel free to open an issue or s
 
 # To-Do
 
-Improve error handling for command execution.
+- Improve error handling for command execution.
 
-Add a settings menu for user preferences.
+- Add a settings menu for user preferences.
 
-Support additional TLDR languages (e.g., localized pages).
+- Support additional TLDR languages (e.g., localized pages).
 
-Add unit tests for core functionalities.
+- Add unit tests for core functionalities.
 
 
 
