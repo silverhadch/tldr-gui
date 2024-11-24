@@ -30,8 +30,8 @@ void hidePopup(Fl_Window *popup);
 void checkForSearchTerm(void *);
 
 // Helper function to execute commands in the background and capture output
-void executeCommandInBackground(const string &command,
-                                Fl_Text_Buffer *outputBuffer) {
+// Helper function to execute commands in the background and capture output
+void executeCommandInBackground(const string &command, Fl_Text_Buffer *outputBuffer) {
   array<char, 128> buffer;
   string result;
 
@@ -43,12 +43,20 @@ void executeCommandInBackground(const string &command,
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
-    Fl::lock();
-    outputBuffer->text(result.c_str());
-    Fl::unlock();
-    Fl::flush();
   }
+
+  // Replace commas with newlines to separate the commands
+  size_t pos = 0;
+  while ((pos = result.find(',')) != string::npos) {
+    result.replace(pos, 1, "\n");  // Replace comma with newline
+  }
+
+  Fl::lock();
+  outputBuffer->text(result.c_str());
+  Fl::unlock();
+  Fl::flush();
 }
+
 
 // Function to check if the output contains the search term
 void checkForSearchTerm(void *) {
@@ -137,6 +145,14 @@ void onUpdate(Fl_Widget *widget, void *data) {
 
 // Function to hide the popup window
 void hidePopup(Fl_Window *popup) { popup->hide(); }
+
+// List All Commands button callback
+void onListCommands(Fl_Widget *widget, void *data) {
+  string command = "tldr -l &";
+  Fl_Text_Buffer *outputBuffer = static_cast<Fl_Text_Buffer *>(data);
+  executeCommandInBackground(command, outputBuffer);
+}
+
 int main() {
   // Calculate a nearly maximized window size
   int windowWidth = Fl::w() * 0.9;  // 90% of screen width
@@ -176,12 +192,14 @@ int main() {
   Fl_Button *searchButton = new Fl_Button(370, 100, 80, 30, "Search");
   Fl_Button *randomButton = new Fl_Button(460, 100, 80, 30, "Random");
   Fl_Button *updateButton = new Fl_Button(550, 100, 120, 30, "Update Database");
+  Fl_Button *listCommandsButton = new Fl_Button(680, 100, 150, 30, "List All Commands");
 
   // Combine data for callbacks
   void *callbackData[] = {searchField, textBuffer};
   searchButton->callback(onSearch, callbackData);
   randomButton->callback(onRandom, textBuffer);
   updateButton->callback(onUpdate, textBuffer);
+  listCommandsButton->callback(onListCommands, textBuffer);
 
   // Automatically show the "tldr tldr" page on startup
   string command = "tldr tldr &";
@@ -198,4 +216,3 @@ int main() {
 
   return Fl::run();
 }
-
