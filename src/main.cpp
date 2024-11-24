@@ -183,8 +183,19 @@ int main() {
   randomButton->callback(onRandom, textBuffer);
   updateButton->callback(onUpdate, textBuffer);
 
+  // Automatically show the "tldr tldr" page on startup
+  string command = "tldr tldr &";
+  Fl_Text_Buffer *outputBuffer = textBuffer;
+
+  // Execute the command immediately upon startup in the background
+  thread commandThread([command, outputBuffer]() {
+    executeCommandInBackground(command, outputBuffer);
+  });
+  commandThread.detach();  // Detach the thread so it doesn't block further operations
+
   window->end();
   window->show();
 
   return Fl::run();
 }
+
