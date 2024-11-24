@@ -137,14 +137,21 @@ void onUpdate(Fl_Widget *widget, void *data) {
 
 // Function to hide the popup window
 void hidePopup(Fl_Window *popup) { popup->hide(); }
-
 int main() {
+  // Calculate a nearly maximized window size
+  int windowWidth = Fl::w() * 0.9;  // 90% of screen width
+  int windowHeight = Fl::h() * 0.9; // 90% of screen height
+
+  // Center the window on the screen
+  int windowX = (Fl::w() - windowWidth) / 2;
+  int windowY = (Fl::h() - windowHeight) / 2;
+
+  // Create the window with calculated size and position
   Fl_Window *window =
-      new Fl_Window(Fl::w(), Fl::h(), "TLDR GUI"); // Fullscreen dimensions
-  window->fullscreen();                            // Default to maximized
+      new Fl_Window(windowX, windowY, windowWidth, windowHeight, "TLDR GUI");
 
   // Add title at the top
-  Fl_Box *title = new Fl_Box(0, 10, Fl::w(), 50, "TLDR Command GUI");
+  Fl_Box *title = new Fl_Box(0, 10, windowWidth, 50, "TLDR Command GUI");
   title->labelfont(FL_BOLD);
   title->labelsize(24);
   title->align(FL_ALIGN_CENTER);
@@ -159,7 +166,7 @@ int main() {
   // Text display
   Fl_Text_Buffer *textBuffer = new Fl_Text_Buffer();
   Fl_Text_Display *textDisplay =
-      new Fl_Text_Display(50, 150, Fl::w() - 100, Fl::h() - 200);
+      new Fl_Text_Display(50, 150, windowWidth - 100, windowHeight - 200);
   textDisplay->buffer(textBuffer);
   textDisplay->textsize(16); // Increase text size for better readability
   window->resizable(
