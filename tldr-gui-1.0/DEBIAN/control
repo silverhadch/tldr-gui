@@ -3,7 +3,7 @@ Version: 1.0
 Section: utils
 Priority: optional
 Architecture: all
-Depends: tldr
+Depends: npm
 Maintainer: Hadi Chokr <hadichokr@icloud.com>
 Description: A GUI for TLDR pages
  A graphical interface to browse TLDR command pages.
