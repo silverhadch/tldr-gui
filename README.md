@@ -1,7 +1,7 @@
 # TLDR GUI  
 
 A simple graphical interface for the TLDR command-line tool, built using FLTK.  
-This project is a work in progress, and contributions are welcome!  
+Contributions are welcome!  
 
 ## Features  
 - **Search TLDR pages:** Enter a command to search and display its TLDR page.  
@@ -28,8 +28,8 @@ Make sure the following dependencies are installed on your system:
 ## How to Compile  
 1. Clone the repository:  
    ```bash  
-   git clone <repository_url>  
-   cd <repository_name>
+   git clone https://github.com/silverhadch/tldr-gui 
+   cd tldr-gui
    ```
 2. Compile the source code:
    ```bash
@@ -48,20 +48,7 @@ This project is licensed under the GNU General Public License v3.0. See the LICE
 
 # Notes
 
-This project is work in progress; features and improvements are ongoing.
-
 If you encounter any issues or have suggestions, feel free to open an issue or submit a pull request!
-
-
-# To-Do
-
-- Improve error handling for command execution.
-
-- Add a settings menu for user preferences.
-
-- Support additional TLDR languages (e.g., localized pages).
-
-- Add unit tests for core functionalities.
 
 
 
