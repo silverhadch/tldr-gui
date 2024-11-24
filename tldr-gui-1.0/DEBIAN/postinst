@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Check if the tldr binary installed by npm is present in the npm global bin directory
+NPM_BIN_DIR=$(npm bin -g)
+
+if ! [ -f "$NPM_BIN_DIR/tldr" ]; then
+  echo "Installing tldr CLI tool globally using npm..."
+  sudo npm install -g tldr
+else
+  echo "tldr (npm version) is already installed globally."
+fi
+
+# Ensure proper permissions and configuration
+exit 0
+

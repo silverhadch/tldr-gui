@@ -8,6 +8,24 @@ A simple and user-friendly graphical interface for the TLDR command-line tool, b
 - **Search TLDR Pages:** Quickly search for a command and view its TLDR page with ease.
 - **Update TLDR Cache:** Refresh your local TLDR cache with a single click.
 - **Responsive UI:** Non-blocking operations ensure the interface remains smooth and responsive while running tasks in the background.
+## This GUI only works with the npm-version of tldr!!!
+
+## Dependencies  
+Make sure the following dependencies are installed on your system:  
+1. **FLTK (Fast Light Toolkit):** For building the GUI.  
+   - On Debian-based systems:  
+     ```bash  
+     sudo apt-get install libfltk1.3-dev  
+     ```  
+   - On Arch-based systems:  
+     ```bash  
+     sudo pacman -S fltk  
+     ```  
+2. **TLDR CLI Tool:**  
+   - Install via `npm` (Node.js is required):  
+     ```bash  
+     npm install -g tldr  
+     ```  
 
 ---
 
