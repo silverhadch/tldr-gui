@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=TLDR GUI
+Comment=A graphical interface for TLDR
+Exec=/usr/local/bin/tldr_gui
+Icon=/usr/share/icons/icon-tldr.png
+Terminal=false
+Categories=Utility;Development;
